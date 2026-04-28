@@ -2,7 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Admin app middleware.
+ * Admin app proxy (replaces deprecated middleware convention — Next.js 16).
  *
  * Gate logic (in order):
  * 1. Public paths → pass through
@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
  * 3. isSuperAdmin=false → redirect /login
  * 4. totpEnrolled=false → redirect /enroll-totp (unless already there)
  *
- * Mirrors peopleCore/middleware.ts but gates on isSuperAdmin + totpEnrolled
+ * Mirrors peopleCore/proxy.ts but gates on isSuperAdmin + totpEnrolled
  * instead of tenantId.
  */
 
@@ -22,7 +22,7 @@ const PUBLIC_PATHS = [
 
 const TOTP_ENROLLMENT_PATH = "/enroll-totp";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Pass through public paths (and all sub-paths of /api/auth)

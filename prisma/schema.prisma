@@ -134,6 +134,7 @@ model Tenant {
   assignmentHistory EmployeeAssignmentHistory[]
   teams             Team[]
   teamMemberships   TeamMembership[]
+  impersonationTokens ImpersonationToken[]
 }
 
 model TenantMembership {
@@ -172,6 +173,12 @@ model User {
   sessions    Session[]
   ownedTeamGoals TeamGoal[]    @relation("TeamGoalOwner")
   goalComments   GoalComment[]
+
+  // Admin security back-relations
+  impersonationTokensCreated ImpersonationToken[] @relation("ImpersonationTokenCreatedBy")
+  impersonationTokensReceived ImpersonationToken[] @relation("ImpersonationTokenTarget")
+  pendingMfaChallenge        PendingMfaChallenge?
+  totpRecoveryCodes          TotpRecoveryCode[]
 }
 
 model Account {
@@ -741,4 +748,48 @@ model DomainEvent {
   @@index([tenantId, type])
   @@index([tenantId, employeeId])
   @@index([occurredAt])
+}
+
+// ─── Admin Security Models ────────────────────────────────────────────────────
+
+model ImpersonationToken {
+  id            String    @id @default(cuid())
+  tenantId      String
+  targetUserId  String
+  createdById   String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  targetUser    User      @relation("ImpersonationTokenTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  createdBy     User      @relation("ImpersonationTokenCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([targetUserId])
+  @@index([expiresAt])
+}
+
+model PendingMfaChallenge {
+  id        String   @id @default(cuid())
+  userId    String   @unique  // enforces one pending challenge per user; upsert required
+  nonce     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model TotpRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String    // bcrypt hash of one-time recovery code
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
 }
