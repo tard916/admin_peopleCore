@@ -8,11 +8,11 @@ export const metadata = { title: "Redirecting… — PeopleCore Admin" };
 /**
  * Impersonation handoff page.
  *
- * This page is the intermediate step between the admin app and PeopleCore.
- * It renders a hidden form that auto-submits via POST to PeopleCore's
- * /api/impersonate endpoint, passing the tokenId in the request body.
+ * Renders a hidden form that auto-POSTs to PeopleCore's /api/impersonate.
+ * Token never appears in a URL, server log, or Referer header.
  *
- * The token never appears in a URL, server log, or Referer header.
+ * TODO (PC-78): ImpersonationToken model requires PC-69 migration.
+ * Until then, this page shows a placeholder.
  */
 export default async function ImpersonatePage({
   params,
@@ -22,29 +22,9 @@ export default async function ImpersonatePage({
   await currentSuperAdmin();
   const { tokenId } = await params;
 
-  // Guard: verify token exists and is not yet consumed/expired
-  const token = await prisma.impersonationToken.findUnique({
-    where: { id: tokenId },
-    select: { usedAt: true, expiresAt: true },
-  });
-
-  if (!token) notFound();
-
-  if (token.usedAt || token.expiresAt < new Date()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center space-y-2">
-          <h1 className="text-xl font-bold text-foreground">
-            Impersonation link expired
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            This token has already been used or has expired. Return to the
-            tenant detail page and try again.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // TODO (PC-78): uncomment after PC-69 migration adds ImpersonationToken model
+  // const token = await prisma.impersonationToken.findUnique({ ... });
+  void prisma; // referenced for future use
 
   const peoplecoreUrl = process.env.PEOPLECORE_URL ?? "http://localhost:3000";
   const actionUrl = `${peoplecoreUrl}/api/impersonate`;

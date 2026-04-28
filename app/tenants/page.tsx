@@ -1,6 +1,6 @@
 import { currentSuperAdmin } from "@/lib/super-admin";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata = { title: "Tenants — PeopleCore Admin" };
 
@@ -19,9 +19,9 @@ export default async function TenantsPage() {
               Tenants
             </h1>
           </div>
-          <Button asChild>
-            <Link href="/tenants/new">New tenant</Link>
-          </Button>
+          <Link href="/tenants/new" className={buttonVariants()}>
+            New tenant
+          </Link>
         </div>
       </header>
 
