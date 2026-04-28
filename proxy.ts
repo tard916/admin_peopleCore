@@ -50,8 +50,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // TOTP not enrolled → force enrollment
-  if (!token.totpEnrolled && pathname !== TOTP_ENROLLMENT_PATH) {
+  // TOTP not enrolled → force enrollment (gated by env until PC-74 lands)
+  if (
+    process.env.REQUIRE_TOTP === "true" &&
+    !token.totpEnrolled &&
+    pathname !== TOTP_ENROLLMENT_PATH
+  ) {
     return NextResponse.redirect(new URL(TOTP_ENROLLMENT_PATH, request.url));
   }
 
