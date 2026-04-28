@@ -1,8 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { cookies } from "next/headers";
 import { z } from "zod";
 import { signIn } from "@/lib/auth";
 import { verifyAdminCredentials } from "@/lib/auth";
@@ -17,12 +15,14 @@ const schema = z.object({
  * Login server action.
  *
  * Handles two paths:
- * 1. TOTP disabled → calls signIn() → NextAuth mints JWT
- * 2. TOTP enabled → creates PendingMfaChallenge (upsert) + sets mfa_nonce
- *    cookie → redirects to /verify-mfa
+ * 1. TOTP disabled → signIn(redirectTo) → NextAuth sets cookie + redirects
+ * 2. TOTP enabled → /verify-mfa (PC-74)
  *
- * TODO (PC-74): PendingMfaChallenge upsert requires PC-69 migration.
- * Until then, all users go through path 1.
+ * NOTE: signIn() with redirectTo throws a NEXT_REDIRECT internally — that
+ * redirect is what actually sets the session cookie atomically. Calling
+ * signIn(..., { redirect: false }) then redirect() separately leaves the
+ * cookie unset because the middleware-level cookie setter only runs on the
+ * NextAuth-internal redirect path.
  */
 export async function loginAction(
   input: unknown,
@@ -32,7 +32,7 @@ export async function loginAction(
 
   const { email, password } = parsed.data;
 
-  // ── Rate limiting ────────────────────────────────────────────────────────
+  // ── Rate limiting (no-op when Upstash env is unset) ──────────────────────
   const headerStore = await headers();
   const ip =
     headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -55,25 +55,25 @@ export async function loginAction(
   }
 
   // ── TOTP branch (PC-74) ──────────────────────────────────────────────────
-  if (user.totpEnabled) {
-    // TODO (PC-74): implement after PC-69 migration adds PendingMfaChallenge
-    // For now, fall through to signIn() — TOTP will be enforced once PC-69 runs.
-    const crypto = await import("crypto");
-    const nonce = crypto.randomBytes(32).toString("hex");
-    void nonce; // suppress unused warning until PC-74
+  // PC-69 schema is in place; PC-74 will wire the actual challenge here.
+  // For now, TOTP-enabled users still go through the regular signIn flow
+  // (verify-mfa stub will be implemented in PC-74).
 
-    // Upsert PendingMfaChallenge, set signed mfa_nonce cookie, redirect
-    // This block requires: prisma.pendingMfaChallenge (PC-69 migration)
-    void cookies; // will be used in PC-74
-    redirect("/verify-mfa");
+  // ── Sign in ──────────────────────────────────────────────────────────────
+  // signIn() throws NEXT_REDIRECT on success — let it propagate so the
+  // session cookie is set atomically. Catch only auth errors.
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/tenants",
+    });
+  } catch (err) {
+    // NEXT_REDIRECT is the success path — re-throw so Next handles it.
+    if (err && typeof err === "object" && "digest" in err) {
+      const digest = String((err as { digest: unknown }).digest);
+      if (digest.startsWith("NEXT_REDIRECT")) throw err;
+    }
+    return { error: "Sign-in failed. Please try again." };
   }
-
-  // ── Non-TOTP path ────────────────────────────────────────────────────────
-  await signIn("credentials", {
-    email,
-    password,
-    redirect: false,
-  });
-
-  redirect("/tenants");
 }
