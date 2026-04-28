@@ -40,25 +40,37 @@ export function VerifyMfaForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="code">Authenticator code</Label>
-        <Input
-          id="code"
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          placeholder="000000"
-          className="text-center tracking-[0.3em] text-lg font-mono"
-          {...register("code")}
-        />
-        {errors.code && (
-          <p className="text-xs text-destructive">{errors.code.message}</p>
-        )}
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <input
+        id="code"
+        type="text"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        placeholder="000000"
+        style={{
+          width: "100%",
+          textAlign: "center",
+          fontSize: "30px",
+          letterSpacing: "0.5em",
+          padding: "14px 16px",
+          paddingRight: 0,
+          background: isPending ? "#fff" : "#EDEEF5",
+          border: isPending ? "1.5px solid #00288E" : "1.5px solid transparent",
+          borderRadius: "6px",
+          outline: "none",
+          fontFamily: '"JetBrains Mono", ui-monospace, monospace',
+          color: "#131B2E",
+          transition: "border 0.12s, background 0.12s",
+          display: "block",
+        }}
+        {...register("code")}
+      />
+      {errors.code && (
+        <span className="text-[11px] text-destructive">{errors.code.message}</span>
+      )}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="w-full" size="lg" disabled={isPending}>
         {isPending ? "Verifying…" : "Verify"}
       </Button>
     </form>

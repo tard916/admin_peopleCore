@@ -37,36 +37,39 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-[5px]">
+        <label htmlFor="email" className="text-[12px] font-medium text-foreground tracking-[-0.01em]">Email</label>
         <Input
           id="email"
           type="email"
           autoComplete="email"
           placeholder="you@224tech.com"
           {...register("email")}
+          className={errors.email ? "border-destructive" : ""}
         />
         {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
+          <span className="text-[11px] text-destructive">{errors.email.message}</span>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="password">Password</Label>
+      <div className="flex flex-col gap-[5px]">
+        <label htmlFor="password" className="text-[12px] font-medium text-foreground tracking-[-0.01em]">Password</label>
         <Input
           id="password"
           type="password"
           autoComplete="current-password"
+          placeholder="••••••••"
           {...register("password")}
+          className={errors.password ? "border-destructive" : ""}
         />
         {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
+          <span className="text-[11px] text-destructive">{errors.password.message}</span>
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Signing in…" : "Sign in"}
+      <Button type="submit" className="w-full mt-1" size="lg" disabled={isPending}>
+        {isPending ? "Signing in…" : "Sign in →"}
       </Button>
     </form>
   );

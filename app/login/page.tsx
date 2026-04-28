@@ -21,32 +21,39 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-1">
-          <p className="eyebrow">224tech internal</p>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            PeopleCore Admin
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in with your super-admin account
-          </p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+      <div className="w-full max-w-[360px]">
+        {/* Logo + heading */}
+        <div className="flex flex-col items-center mb-7 gap-2.5">
+          <div className="w-9 h-9 rounded-[10px] bg-primary flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="4.5" r="2.5" fill="white" />
+              <path d="M1 12c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div className="flex flex-col items-center gap-[3px]">
+            <span className="text-[15px] font-bold text-foreground tracking-[-0.025em]">PeopleCore Admin</span>
+            <span className="text-[10.5px] text-muted-foreground tracking-[0.07em] uppercase font-medium">224tech internal</span>
+          </div>
         </div>
 
-        {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-            {error === "CredentialsSignin"
-              ? "Invalid email or password."
-              : "An error occurred. Please try again."}
-          </div>
-        )}
+        {/* Card */}
+        <div className="bg-surface rounded-xl border border-border p-7">
+          <h2 className="text-[17px] font-semibold text-foreground tracking-[-0.025em] mb-5">Sign in</h2>
 
-        <LoginForm />
+          {error && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive mb-4">
+              {error === "CredentialsSignin"
+                ? "Invalid email or password."
+                : "An error occurred. Please try again."}
+            </div>
+          )}
 
-        <p className="text-center text-xs text-muted-foreground">
-          Access restricted to 224tech team members on the office network or
-          VPN.
+          <LoginForm />
+        </div>
+
+        <p className="text-center text-[11.5px] text-muted-foreground mt-[18px]">
+          Access restricted to office network / VPN
         </p>
       </div>
     </div>
