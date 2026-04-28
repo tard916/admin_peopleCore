@@ -7,24 +7,13 @@ import { z } from "zod";
 /**
  * Admin app NextAuth config.
  *
- * Key differences from peopleCore:
  * - No tenantSlug in credentials — super-admins are global, not tenant-scoped
- * - Gates on isSuperAdmin === true (added by PC-68 migration)
- * - Uses distinct cookie name "adminjs.session-token" to prevent browser-level
- *   confusion with peopleCore's "authjs.session-token"
- * - JWT includes aud: "admin" — cross-app token isolation
- * - TOTP flow: MFA challenge is NOT created in authorize() — NextAuth v5
- *   beta.31 cannot attach custom payload to a null return. The login server
- *   action in app/login/actions.ts handles TOTP branching after calling
- *   verifyAdminCredentials().
- *
- * NOTE: isSuperAdmin / totpEnabled fields require PC-68 migration to exist.
- * Until that migration runs, type-cast via `as any` keeps the scaffold
- * compiling. Remove the casts after running the migration.
+ * - Gates on isSuperAdmin === true (PC-68 migration)
+ * - Distinct cookie "adminjs.session-token" — no collision with peopleCore
+ * - JWT aud: "admin" — cross-app token isolation
+ * - TOTP flow: MFA challenge handled in login server action (app/login/actions.ts),
+ *   NOT in authorize(). NextAuth v5 beta.31 cannot carry a custom payload on null return.
  */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyUser = any;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -49,9 +38,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       /**
-       * authorize() only handles the non-TOTP path.
-       * When TOTP is enabled, the login action bypasses signIn() entirely.
-       * TODO: Remove AnyUser cast after PC-68 migration adds isSuperAdmin/totpEnabled.
+       * authorize() handles only the non-TOTP path.
+       * When TOTP is enabled the login action redirects to /verify-mfa before
+       * calling signIn(), so this function never runs for TOTP users.
        */
       async authorize(credentials) {
         const parsed = z
@@ -59,20 +48,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user: AnyUser = await prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
           select: {
             id: true,
             email: true,
             name: true,
             hashedPassword: true,
-            // TODO: add isSuperAdmin, totpEnabled after PC-68 migration
+            isSuperAdmin: true,
+            totpEnabled: true,
+            sessionVersion: true,
           },
         });
 
         if (!user?.hashedPassword) return null;
-        // TODO: guard `!user.isSuperAdmin` after PC-68 migration
-        if (user.isSuperAdmin === false) return null;
+        if (!user.isSuperAdmin) return null;
 
         const valid = await bcrypt.compare(
           parsed.data.password,
@@ -80,15 +70,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!valid) return null;
 
-        if (user.totpEnabled) return null; // TOTP path handled by login action
+        // TOTP path: the login action already redirected to /verify-mfa.
+        // If we somehow end up here with TOTP enabled, block sign-in.
+        if (user.totpEnabled) return null;
 
         return {
           id: user.id,
           email: user.email,
           name: user.name ?? undefined,
           isSuperAdmin: true,
-          totpEnrolled: user.totpEnabled ?? false,
-          sessionVersion: user.sessionVersion ?? 0,
+          totpEnrolled: user.totpEnabled,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -96,37 +88,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.isSuperAdmin = (user as AnyUser).isSuperAdmin;
-        token.totpEnrolled = (user as AnyUser).totpEnrolled;
-        token.sessionVersion = (user as AnyUser).sessionVersion;
+        // Initial sign-in — stamp the token with admin claims
+        const u = user as {
+          isSuperAdmin: boolean;
+          totpEnrolled: boolean;
+          sessionVersion: number;
+        };
+        token.isSuperAdmin = u.isSuperAdmin;
+        token.totpEnrolled = u.totpEnrolled;
+        token.sessionVersion = u.sessionVersion;
         token.aud = "admin";
         return token;
       }
 
+      // Subsequent requests — validate aud and sessionVersion tombstone
       if (token.aud !== "admin") return {};
 
       if (token.sub) {
-        const dbUser: AnyUser = await prisma.user.findUnique({
+        const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
-          select: {
-            sessionVersion: true,
-            // TODO: add isSuperAdmin after PC-68 migration
-          },
+          select: { sessionVersion: true, isSuperAdmin: true },
         });
-        if (!dbUser || dbUser.sessionVersion !== token.sessionVersion) {
+        if (
+          !dbUser ||
+          !dbUser.isSuperAdmin ||
+          dbUser.sessionVersion !== token.sessionVersion
+        ) {
           return {};
         }
-        // TODO: also check isSuperAdmin after PC-68 migration
       }
 
       return token;
     },
+
     async session({ session, token }) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!token.sub || token.aud !== "admin") return { ...session, user: undefined } as any;
+      if (!token.sub || token.aud !== "admin") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { ...session, user: undefined } as any;
+      }
       session.user.id = token.sub;
-      (session.user as AnyUser).isSuperAdmin = token.isSuperAdmin;
-      (session.user as AnyUser).totpEnrolled = token.totpEnrolled;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session.user as any).isSuperAdmin = token.isSuperAdmin;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session.user as any).totpEnrolled = token.totpEnrolled;
       return session;
     },
   },
@@ -135,8 +139,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 /**
  * Validate admin credentials without going through NextAuth's signIn().
  * Used by the login server action for the TOTP branching path.
- *
- * TODO: Tighten types after PC-68 migration adds isSuperAdmin/totpEnabled/totpSecret.
  */
 export async function verifyAdminCredentials(
   email: string,
@@ -149,20 +151,22 @@ export async function verifyAdminCredentials(
   totpSecret: string | null;
   sessionVersion: number;
 } | null> {
-  const user: AnyUser = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email },
     select: {
       id: true,
       email: true,
       name: true,
       hashedPassword: true,
+      isSuperAdmin: true,
+      totpEnabled: true,
+      totpSecret: true,
       sessionVersion: true,
-      // TODO: add isSuperAdmin, totpEnabled, totpSecret after PC-68 migration
     },
   });
 
   if (!user?.hashedPassword) return null;
-  // TODO: guard `!user.isSuperAdmin` after PC-68 migration
+  if (!user.isSuperAdmin) return null;
 
   const valid = await bcrypt.compare(password, user.hashedPassword);
   if (!valid) return null;
@@ -171,8 +175,8 @@ export async function verifyAdminCredentials(
     id: user.id,
     email: user.email,
     name: user.name,
-    totpEnabled: user.totpEnabled ?? false,
-    totpSecret: user.totpSecret ?? null,
-    sessionVersion: user.sessionVersion ?? 0,
+    totpEnabled: user.totpEnabled,
+    totpSecret: user.totpSecret,
+    sessionVersion: user.sessionVersion,
   };
 }

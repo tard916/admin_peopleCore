@@ -83,6 +83,11 @@ enum TenantPlan {
   ENTERPRISE
 }
 
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 enum DisputeStatus {
   OPEN
   RESOLVED
@@ -92,14 +97,17 @@ enum DisputeStatus {
 // ─── Tenant ──────────────────────────────────────────────────────────────────
 
 model Tenant {
-  id        String     @id @default(cuid())
+  id        String       @id @default(cuid())
   name      String
-  slug      String     @unique   // used for subdomain: slug.peoplecore.io
-  plan      TenantPlan @default(FREE)
+  slug      String       @unique   // used for subdomain: slug.peoplecore.io
+  plan      TenantPlan   @default(FREE)
+  status    TenantStatus @default(ACTIVE)
+  deletedAt DateTime?
+  tenantVersion Int      @default(0)
   logoUrl                      String?
   weeklyOvertimeThresholdHours Int        @default(40)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   memberships       TenantMembership[]
   departments       Department[]
@@ -145,13 +153,17 @@ model TenantMembership {
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  name           String?
-  hashedPassword String?
-  sessionVersion Int       @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String?
+  hashedPassword     String?
+  sessionVersion     Int       @default(0)
+  isSuperAdmin       Boolean   @default(false)
+  mustChangePassword Boolean   @default(false)
+  totpEnabled        Boolean   @default(false)
+  totpSecret         String?   // AES-256-GCM encrypted; null until TOTP is enrolled
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   memberships TenantMembership[]
   employee    Employee?
@@ -696,7 +708,7 @@ model TeamMembership {
 
 model AuditLog {
   id          String   @id @default(cuid())
-  tenantId    String
+  tenantId    String?  // nullable — admin-scope events have no tenant
   actorId     String?
   entityType  String
   entityId    String
@@ -706,7 +718,7 @@ model AuditLog {
   sessionId   String?
   createdAt   DateTime @default(now())
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actor       User?    @relation(fields: [actorId], references: [id])
 
   @@index([tenantId, entityType, entityId])
