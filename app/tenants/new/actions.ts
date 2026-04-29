@@ -58,25 +58,31 @@ export async function createTenantAction(
   try {
     // TODO (PC-76): Requires PC-68 migration to add Tenant model + User.isSuperAdmin/tenantId fields
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tenant = await (prisma as any).tenant.create({
-      data: {
-        id: `ten_${nanoid(8)}`,
-        name,
-        slug,
-        plan,
-        status: "ACTIVE",
-        user: {
-          create: {
-            id: `usr_${nanoid(8)}`,
-            firstName,
-            lastName,
-            email,
-            hashedPassword,
-            mustChangePassword: true,
+    const tenant = await prisma.tenant.create({
+  data: {
+    id: `ten_${nanoid(8)}`,
+    name,
+    slug,
+    plan,
+    status: "ACTIVE",
+    memberships: {
+      create: [
+        {
+          role: "ADMIN", // or "EMPLOYEE" or introduce OWNER later
+          user: {
+            create: {
+              id: `usr_${nanoid(8)}`,
+              email,
+              name: `${firstName} ${lastName}`, // 👈 your schema uses `name`, not first/last
+              hashedPassword,
+              mustChangePassword: true,
+            },
           },
         },
-      },
-    });
+      ],
+    },
+  },
+});
 
     const session = await getFlashSession();
     session.tempPassword = tempPassword;
