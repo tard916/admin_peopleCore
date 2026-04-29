@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { auth } from "@/lib/auth";
+import { UserButton } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 
 interface Crumb {
   label: string;
@@ -12,12 +13,8 @@ interface TopNavProps {
 }
 
 export async function TopNav({ crumbs = [], actions }: TopNavProps) {
-  const session = await auth();
-  const user = session?.user as { name?: string; email?: string } | undefined;
-  const initials = user?.name
-    ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
-    : "SA";
-  const email = user?.email ?? "";
+  const user = await currentUser();
+  const email = user?.primaryEmailAddress?.emailAddress ?? "";
 
   return (
     <nav
@@ -66,10 +63,8 @@ export async function TopNav({ crumbs = [], actions }: TopNavProps) {
       {actions}
 
       <div className="flex items-center gap-2 ml-3">
-        <div className="w-[26px] h-[26px] rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-          {initials}
-        </div>
         <span className="text-[12px] text-muted-foreground hidden sm:block">{email}</span>
+        <UserButton appearance={{ elements: { avatarBox: "w-[26px] h-[26px]" } }} />
       </div>
     </nav>
   );
