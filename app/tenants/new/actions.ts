@@ -65,7 +65,7 @@ export async function createTenantAction(
         slug,
         plan,
         status: "ACTIVE",
-        users: {
+        user: {
           create: {
             id: `usr_${nanoid(8)}`,
             firstName,
