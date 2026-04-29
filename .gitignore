@@ -32,3 +32,4 @@ test-results/
 
 # TypeScript
 *.tsbuildinfo
+.vercel

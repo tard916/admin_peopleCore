@@ -1,75 +1,46 @@
-import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 /**
- * Admin app proxy (replaces deprecated middleware convention — Next.js 16).
+ * Admin app proxy (Next.js 16 convention; replaces deprecated `middleware`).
  *
  * Gate logic (in order):
- * 1. Public paths → pass through
- * 2. No token / invalid aud → redirect /login
- * 3. isSuperAdmin=false → redirect /login
- * 4. totpEnrolled=false → redirect /enroll-totp (unless already there)
+ * 1. Public paths (login, sign-in/up, api/webhooks) → pass through
+ * 2. No Clerk session → redirect /login
+ * 3. Clerk session present but no `org:admin` role → redirect /access-denied
+ * 4. Otherwise → pass through (deeper authz happens in `currentSuperAdmin()`)
  *
- * Mirrors peopleCore/proxy.ts but gates on isSuperAdmin + totpEnrolled
- * instead of tenantId.
+ * The `User.isSuperAdmin` DB column is no longer the gate — Clerk's org role is.
+ * See plan: docs/plans/2026-04-29-001-refactor-clerk-auth-migration-plan.md (Unit 3)
  */
 
-const PUBLIC_PATHS = [
-  "/login",
-  "/verify-mfa",
-  "/api/auth",
-];
+const isPublicRoute = createRouteMatcher([
+  "/login(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/access-denied(.*)",
+  "/api/webhooks(.*)",
+]);
 
-const TOTP_ENROLLMENT_PATH = "/enroll-totp";
+export default clerkMiddleware(async (auth, request) => {
+  if (isPublicRoute(request)) return;
 
-export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { userId, has } = await auth();
 
-  // Pass through public paths (and all sub-paths of /api/auth)
-  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    return NextResponse.next();
+  if (!userId) {
+    const url = new URL("/login", request.url);
+    url.searchParams.set("callbackUrl", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
   }
 
-  // Cookie name matches auth.ts config
-  const cookieName =
-    process.env.NODE_ENV === "production"
-      ? "__Secure-adminjs.session-token"
-      : "adminjs.session-token";
-
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET!,
-    salt: cookieName,
-    cookieName,
-  });
-
-  // No token or wrong audience → login
-  if (!token || token.aud !== "admin" || !token.isSuperAdmin) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (!has({ role: "org:admin" })) {
+    return NextResponse.redirect(new URL("/access-denied", request.url));
   }
-
-  // TOTP not enrolled → force enrollment (gated by env until PC-74 lands)
-  if (
-    process.env.REQUIRE_TOTP === "true" &&
-    !token.totpEnrolled &&
-    pathname !== TOTP_ENROLLMENT_PATH
-  ) {
-    return NextResponse.redirect(new URL(TOTP_ENROLLMENT_PATH, request.url));
-  }
-
-  return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    /*
-     * Match all paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimisation)
-     * - favicon.ico, robots.txt
-     */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };
