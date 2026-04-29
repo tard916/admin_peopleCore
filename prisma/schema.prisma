@@ -163,6 +163,7 @@ model User {
   mustChangePassword Boolean   @default(false)
   totpEnabled        Boolean   @default(false)
   totpSecret         String?   // AES-256-GCM encrypted; null until TOTP is enrolled
+  clerkId            String?   @unique  // PC-79: Clerk identity bridge (admin app); nullable — tenant users never have one
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
