@@ -96,7 +96,7 @@ export function OnboardingSuccessClient({ tenantSlug, adminEmail, tempPassword }
 
         <Link
           href="/tenants"
-          className="block w-full py-2.5 px-5 rounded-md text-center text-sm font-medium text-foreground border border-border bg-surface hover:bg-muted transition-colors"
+          className="block w-full py-2.5 px-5 rounded-md text-center t-ui font-medium text-foreground border border-border bg-surface hover:bg-muted transition-colors"
         >
           Back to tenants
         </Link>

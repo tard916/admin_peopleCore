@@ -141,14 +141,14 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
             <div className="flex gap-1.5 shrink-0">
               <button
                 onClick={() => { setEditForm({ name: tenant.name, plan: tenant.plan }); setShowEdit(true); }}
-                className="px-3 py-1.5 text-xs rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
+                className="px-3 py-1.5 t-small rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
               >
                 Edit
               </button>
               <button
                 onClick={() => setShowSuspend(true)}
                 disabled={isPending}
-                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors disabled:opacity-50 ${
+                className={`px-3 py-1.5 t-small rounded-md font-medium transition-colors disabled:opacity-50 ${
                   tenant.status === "ACTIVE"
                     ? "border text-destructive hover:bg-destructive/5"
                     : "border border-border bg-surface text-foreground hover:bg-muted"
@@ -184,7 +184,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
           {hasAdmin ? (
             <Link
               href={`/impersonate/${tenant.id}`}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 t-ui rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                 <circle cx="6.5" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.4" />
@@ -196,7 +196,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
             <div className="relative inline-flex group">
               <button
                 disabled
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-md border border-border bg-surface text-foreground opacity-45 cursor-not-allowed font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-2 t-ui rounded-md border border-border bg-surface text-foreground opacity-45 cursor-not-allowed font-medium"
               >
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                   <circle cx="6.5" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.4" />
@@ -204,7 +204,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
                 </svg>
                 Log in as tenant
               </button>
-              <div className="absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-foreground text-white text-xs px-2.5 py-1 rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              <div className="absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-foreground text-white t-small px-2.5 py-1 rounded whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
                 No active admin user
               </div>
             </div>
@@ -243,7 +243,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
           {!deleteMode ? (
             <button
               onClick={() => setDeleteMode(true)}
-              className="px-3 py-1.5 text-xs rounded-md font-medium text-destructive border transition-colors hover:bg-destructive/5"
+              className="px-3 py-1.5 t-small rounded-md font-medium text-destructive border transition-colors hover:bg-destructive/5"
               style={{ borderColor: "rgba(178,30,30,0.35)" }}
             >
               Delete tenant…
@@ -263,13 +263,13 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
                 <button
                   disabled={deleteInput !== tenant.slug || isPending}
                   onClick={handleDelete}
-                  className="px-3 py-1.5 text-xs rounded-md font-medium text-white bg-destructive disabled:opacity-40 hover:bg-[#8f1818] transition-colors"
+                  className="px-3 py-1.5 t-small rounded-md font-medium text-white bg-destructive disabled:opacity-40 hover:bg-[#8f1818] transition-colors"
                 >
                   {isPending ? "Deleting…" : "Confirm delete"}
                 </button>
                 <button
                   onClick={() => { setDeleteMode(false); setDeleteInput(""); }}
-                  className="px-3 py-1.5 text-xs rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  className="px-3 py-1.5 t-small rounded-md font-medium text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
@@ -293,14 +293,14 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
         <div className="flex justify-end gap-2">
           <button
             onClick={() => setShowSuspend(false)}
-            className="px-3 py-2 text-sm rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
+            className="px-3 py-2 t-ui rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSuspendConfirm}
             disabled={isPending}
-            className={`px-3 py-2 text-sm rounded-md font-medium text-white transition-colors disabled:opacity-50 ${
+            className={`px-3 py-2 t-ui rounded-md font-medium text-white transition-colors disabled:opacity-50 ${
               tenant.status === "ACTIVE" ? "bg-destructive hover:bg-[#8f1818]" : "bg-primary hover:bg-primary/90"
             }`}
           >
@@ -321,7 +321,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
         >
           <div className="flex flex-col gap-3.5 mb-5">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-foreground">Company name</label>
+              <label className="eyebrow text-foreground">Company name</label>
               <input
                 name="name"
                 value={editForm.name}
@@ -333,7 +333,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
               )}
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-foreground">Plan</label>
+              <label className="eyebrow text-foreground">Plan</label>
               <select
                 name="plan"
                 value={editForm.plan}
@@ -360,13 +360,13 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
             <button
               type="button"
               onClick={() => setShowEdit(false)}
-              className="px-3 py-2 text-sm rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
+              className="px-3 py-2 t-ui rounded-md border border-border bg-surface text-foreground font-medium hover:bg-muted transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-3 py-2 text-sm rounded-md font-medium text-white bg-primary hover:bg-primary/90 transition-colors"
+              className="px-3 py-2 t-ui rounded-md font-medium text-white bg-primary hover:bg-primary/90 transition-colors"
             >
               Save changes
             </button>

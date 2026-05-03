@@ -25,7 +25,7 @@ const selectCls =
   "px-3 py-2 bg-muted border border-transparent rounded-md t-ui outline-none focus:bg-white focus:border-primary appearance-none transition-all cursor-pointer";
 const chevron = `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
 const paginationBtn =
-  "px-3 py-1 text-xs rounded-md border border-border bg-surface text-foreground disabled:opacity-40 hover:bg-muted transition-colors";
+  "px-3 py-1.5 t-small rounded-md border border-border bg-surface text-foreground disabled:opacity-40 hover:bg-muted transition-colors";
 
 export function TenantList({ tenants }: { tenants: Tenant[] }) {
   const [search, setSearch] = useState("");
@@ -169,7 +169,7 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
                 <button
                   key={n}
                   onClick={() => setPage(n)}
-                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  className={`px-3 py-1.5 t-small rounded-md transition-colors ${
                     n === page
                       ? "bg-primary text-white border border-primary"
                       : "border border-border bg-surface text-foreground hover:bg-muted"

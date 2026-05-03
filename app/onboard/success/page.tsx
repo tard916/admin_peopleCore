@@ -28,7 +28,7 @@ export default async function OnboardSuccessPage({
           </p>
           <a
             href="/tenants"
-            className="inline-block px-5 py-2.5 bg-surface border border-border rounded-md text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            className="inline-block px-5 py-2.5 bg-surface border border-border rounded-md t-ui font-medium text-foreground hover:bg-muted transition-colors"
           >
             Back to tenants
           </a>
