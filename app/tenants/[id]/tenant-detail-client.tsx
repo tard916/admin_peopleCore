@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useActionState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { PlanBadge, StatusBadge, SlugChip } from "@/components/pc-badge";
+import {
+  editTenantAction,
+  suspendTenantAction,
+  reactivateTenantAction,
+  deleteTenantAction,
+} from "./actions";
 
 function fmtDate(s: string) {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(s).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 interface Tenant {
@@ -46,7 +57,9 @@ function Dialog({
         style={{ width, maxWidth: "100%", boxShadow: "0 8px 40px rgba(19,27,46,0.18)" }}
       >
         {title && (
-          <h3 className="text-[15px] font-semibold text-foreground tracking-[-0.02em] mb-3">{title}</h3>
+          <h3 className="text-[15px] font-semibold text-foreground tracking-[-0.02em] mb-3">
+            {title}
+          </h3>
         )}
         {children}
       </div>
@@ -61,68 +74,87 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
   const [editForm, setEditForm] = useState({ name: tenant.name, plan: tenant.plan });
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
-  const [impersonating, setImpersonating] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const hasAdmin = tenant.hrAdmins > 0;
+  // Edit action wired with useFormState
+  const boundEdit = editTenantAction.bind(null, tenant.id);
+  const [editState, editDispatch] = useActionState(boundEdit, undefined);
 
   const inputCls =
     "w-full px-3 py-2 rounded-md text-[13px] text-foreground outline-none border transition-all bg-[#EDEEF5] border-transparent focus:bg-white focus:border-primary";
 
+  function handleSuspendConfirm() {
+    startTransition(async () => {
+      try {
+        if (tenant.status === "ACTIVE") {
+          await suspendTenantAction(tenant.id);
+          setTenant((t) => ({ ...t, status: "SUSPENDED" }));
+          toast.success("Tenant suspended");
+        } else {
+          await reactivateTenantAction(tenant.id);
+          setTenant((t) => ({ ...t, status: "ACTIVE" }));
+          toast.success("Tenant reactivated");
+        }
+      } catch {
+        toast.error("Something went wrong. Please try again.");
+      }
+      setShowSuspend(false);
+    });
+  }
+
+  function handleDelete() {
+    startTransition(async () => {
+      try {
+        await deleteTenantAction(tenant.id);
+        // redirect() inside action navigates away
+      } catch {
+        toast.error("Failed to delete tenant.");
+      }
+    });
+  }
+
+  const hasAdmin = tenant.hrAdmins > 0;
+
   return (
     <>
-      {/* Impersonation banner */}
-      {impersonating && (
-        <div
-          className="flex items-center px-6 py-2.5 text-[12.5px] gap-3"
-          style={{ background: "#006A61", color: "#fff" }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0">
-            <circle cx="7" cy="4.5" r="2" stroke="white" strokeWidth="1.4" />
-            <path d="M2 12c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
-          </svg>
-          <span className="flex-1">
-            Viewing as 224tech support — <strong>{tenant.name}</strong>. Some actions are restricted.
-          </span>
-          <button
-            onClick={() => setImpersonating(false)}
-            className="text-[11.5px] font-medium px-2.5 py-0.5 rounded"
-            style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", cursor: "pointer" }}
-          >
-            Exit
-          </button>
-        </div>
-      )}
-
       <main className="mx-auto w-full max-w-[820px] px-6 py-6 flex-1">
-        <a
+        <Link
           href="/tenants"
           className="inline-flex items-center gap-1 text-[12.5px] text-muted-foreground mb-5 hover:text-foreground transition-colors"
         >
           ← Tenants
-        </a>
+        </Link>
 
         {/* Header card */}
         <div className="bg-surface rounded-xl border border-border p-5 mb-2.5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-[21px] font-bold text-foreground tracking-[-0.03em] mb-2">{tenant.name}</h1>
+              <h1 className="text-[21px] font-bold text-foreground tracking-[-0.03em] mb-2">
+                {tenant.name}
+              </h1>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <SlugChip value={tenant.slug} />
                 <PlanBadge value={tenant.plan} />
                 <StatusBadge value={tenant.status} />
-                <span className="text-[11.5px] text-muted-foreground">Created {fmtDate(tenant.createdAt)}</span>
+                <span className="text-[11.5px] text-muted-foreground">
+                  Created {fmtDate(tenant.createdAt)}
+                </span>
               </div>
             </div>
             <div className="flex gap-1.5 shrink-0">
               <button
-                onClick={() => setShowEdit(true)}
+                onClick={() => {
+                  setEditForm({ name: tenant.name, plan: tenant.plan });
+                  setShowEdit(true);
+                }}
                 className="px-3 py-1.5 text-[12px] rounded-md border border-border bg-surface text-foreground hover:bg-[#EDEEF5] transition-colors font-medium"
               >
                 Edit
               </button>
               <button
                 onClick={() => setShowSuspend(true)}
-                className={`px-3 py-1.5 text-[12px] rounded-md font-medium transition-colors ${
+                disabled={isPending}
+                className={`px-3 py-1.5 text-[12px] rounded-md font-medium transition-colors disabled:opacity-50 ${
                   tenant.status === "ACTIVE"
                     ? "border text-destructive hover:bg-destructive/5"
                     : "border border-border bg-surface text-foreground hover:bg-[#EDEEF5]"
@@ -151,25 +183,34 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
               className="px-5 py-4"
               style={{ borderRight: i < 2 ? "1px solid rgba(19,27,46,0.08)" : "none" }}
             >
-              <div className="text-[10.5px] text-muted-foreground uppercase tracking-[0.06em] font-semibold mb-1.5">{s.label}</div>
-              <div className="text-[20px] font-bold text-foreground tracking-[-0.025em] tabular-nums">{s.value}</div>
+              <div className="text-[10.5px] text-muted-foreground uppercase tracking-[0.06em] font-semibold mb-1.5">
+                {s.label}
+              </div>
+              <div className="text-[20px] font-bold text-foreground tracking-[-0.025em] tabular-nums">
+                {s.value}
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Impersonate button */}
+        {/* Impersonate */}
         <div className="mb-4">
           {hasAdmin ? (
-            <button
-              onClick={() => setImpersonating(true)}
+            <Link
+              href={`/impersonate/${tenant.id}`}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] rounded-md border border-border bg-surface text-foreground hover:bg-[#EDEEF5] transition-colors font-medium"
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                 <circle cx="6.5" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M1.5 11.5c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <path
+                  d="M1.5 11.5c0-2.761 2.239-5 5-5s5 2.239 5 5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
               </svg>
               Log in as tenant
-            </button>
+            </Link>
           ) : (
             <div className="relative inline-flex group">
               <button
@@ -178,7 +219,12 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
               >
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                   <circle cx="6.5" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-                  <path d="M1.5 11.5c0-2.761 2.239-5 5-5s5 2.239 5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  <path
+                    d="M1.5 11.5c0-2.761 2.239-5 5-5s5 2.239 5 5"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 Log in as tenant
               </button>
@@ -189,20 +235,26 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
           )}
         </div>
 
-        {/* Members table (read-only placeholder) */}
+        {/* Members list */}
         <div className="bg-surface rounded-xl border border-border mb-4">
           <div className="px-5 border-b border-border">
             <button
-              className="py-3 text-[13px] font-medium text-primary border-b-2 bg-none border-primary"
+              className="py-3 text-[13px] font-medium text-primary border-b-2 border-primary"
               style={{ marginBottom: "-1px" }}
             >
               Members
             </button>
           </div>
           <div className="px-5 pt-3 pb-4">
-            <p className="text-[11.5px] text-muted-foreground mb-3">Member management is read-only in v1.</p>
+            <p className="text-[11.5px] text-muted-foreground mb-3">
+              Member management is read-only in v1.
+            </p>
             <p className="text-[13px] text-muted-foreground italic">
-              {tenant.employeeCount === 0 ? "No members yet." : `${tenant.employeeCount} member(s)`}
+              {tenant.employeeCount === 0
+                ? "No members yet."
+                : `${tenant.employeeCount} member(s)${
+                    tenant.adminEmail ? ` · Primary admin: ${tenant.adminEmail}` : ""
+                  }`}
             </p>
           </div>
         </div>
@@ -215,7 +267,9 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
             background: "rgba(178,30,30,0.025)",
           }}
         >
-          <div className="text-[10.5px] font-bold text-destructive uppercase tracking-[0.06em] mb-1.5">Danger zone</div>
+          <div className="text-[10.5px] font-bold text-destructive uppercase tracking-[0.06em] mb-1.5">
+            Danger zone
+          </div>
           <p className="text-[13px] text-muted-foreground mb-4">
             Soft-delete this tenant. Data is retained for 90 days and can be recovered on request.
           </p>
@@ -230,7 +284,8 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
           ) : (
             <div>
               <p className="text-[13px] text-foreground mb-2.5">
-                Type <strong className="font-mono">{tenant.slug}</strong> to confirm.
+                Type{" "}
+                <strong className="font-mono">{tenant.slug}</strong> to confirm.
               </p>
               <div className="flex gap-2 items-center">
                 <input
@@ -240,14 +295,17 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
                   className="px-3 py-1.5 rounded-md text-[13px] font-mono outline-none border border-transparent bg-[#EDEEF5] focus:bg-white focus:border-primary transition-all max-w-[220px]"
                 />
                 <button
-                  disabled={deleteInput !== tenant.slug}
-                  onClick={() => { /* TODO PC-77: call delete action */ }}
+                  disabled={deleteInput !== tenant.slug || isPending}
+                  onClick={handleDelete}
                   className="px-3 py-1.5 text-[12px] rounded-md font-medium text-white bg-destructive disabled:opacity-40 hover:bg-[#8f1818] transition-colors"
                 >
-                  Confirm delete
+                  {isPending ? "Deleting…" : "Confirm delete"}
                 </button>
                 <button
-                  onClick={() => { setDeleteMode(false); setDeleteInput(""); }}
+                  onClick={() => {
+                    setDeleteMode(false);
+                    setDeleteInput("");
+                  }}
                   className="px-3 py-1.5 text-[12px] rounded-md font-medium text-muted-foreground hover:bg-[#EDEEF5] transition-colors"
                 >
                   Cancel
@@ -262,7 +320,11 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
       <Dialog
         open={showSuspend}
         onClose={() => setShowSuspend(false)}
-        title={tenant.status === "ACTIVE" ? `Suspend ${tenant.name}?` : `Reactivate ${tenant.name}?`}
+        title={
+          tenant.status === "ACTIVE"
+            ? `Suspend ${tenant.name}?`
+            : `Reactivate ${tenant.name}?`
+        }
       >
         <p className="text-[13px] text-muted-foreground leading-relaxed mb-5">
           {tenant.status === "ACTIVE"
@@ -277,67 +339,98 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
             Cancel
           </button>
           <button
-            onClick={() => {
-              setTenant((t) => ({ ...t, status: t.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" }));
-              setShowSuspend(false);
-            }}
-            className={`px-3 py-2 text-[13px] rounded-md font-medium text-white transition-colors ${
-              tenant.status === "ACTIVE" ? "bg-destructive hover:bg-[#8f1818]" : "bg-primary hover:bg-[#001e6e]"
+            onClick={handleSuspendConfirm}
+            disabled={isPending}
+            className={`px-3 py-2 text-[13px] rounded-md font-medium text-white transition-colors disabled:opacity-50 ${
+              tenant.status === "ACTIVE"
+                ? "bg-destructive hover:bg-[#8f1818]"
+                : "bg-primary hover:bg-[#001e6e]"
             }`}
           >
-            {tenant.status === "ACTIVE" ? "Suspend" : "Reactivate"}
+            {isPending
+              ? "…"
+              : tenant.status === "ACTIVE"
+              ? "Suspend"
+              : "Reactivate"}
           </button>
         </div>
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={showEdit} onClose={() => setShowEdit(false)} title="Edit tenant" width={380}>
-        <div className="flex flex-col gap-3.5 mb-5">
-          <div className="flex flex-col gap-[5px]">
-            <label className="text-[12px] font-medium text-foreground">Company name</label>
-            <input
-              value={editForm.name}
-              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-              className={inputCls}
-            />
+      <Dialog
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+        title="Edit tenant"
+        width={380}
+      >
+        <form
+          action={(fd) => {
+            editDispatch(fd);
+            // Optimistic update
+            setTenant((t) => ({
+              ...t,
+              name: fd.get("name") as string,
+              plan: fd.get("plan") as string,
+            }));
+            setShowEdit(false);
+            toast.success("Tenant updated");
+          }}
+        >
+          <div className="flex flex-col gap-3.5 mb-5">
+            <div className="flex flex-col gap-[5px]">
+              <label className="text-[12px] font-medium text-foreground">Company name</label>
+              <input
+                name="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                className={inputCls}
+              />
+              {editState?.errors?.name && (
+                <p className="text-[11.5px] text-destructive">{editState.errors.name}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-[5px]">
+              <label className="text-[12px] font-medium text-foreground">Plan</label>
+              <select
+                name="plan"
+                value={editForm.plan}
+                onChange={(e) => setEditForm((f) => ({ ...f, plan: e.target.value }))}
+                className={inputCls}
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 10px center",
+                  paddingRight: "32px",
+                  appearance: "none",
+                }}
+              >
+                {["FREE", "STARTER", "GROWTH", "ENTERPRISE"].map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex flex-col gap-[5px]">
-            <label className="text-[12px] font-medium text-foreground">Plan</label>
-            <select
-              value={editForm.plan}
-              onChange={(e) => setEditForm((f) => ({ ...f, plan: e.target.value }))}
-              className={inputCls}
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right 10px center",
-                paddingRight: "32px",
-                appearance: "none",
-              }}
+          {editState?.error && (
+            <p className="text-[11.5px] text-destructive mb-3">{editState.error}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowEdit(false)}
+              className="px-3 py-2 text-[13px] rounded-md border border-border bg-surface text-foreground hover:bg-[#EDEEF5] transition-colors font-medium"
             >
-              {["FREE", "STARTER", "GROWTH", "ENTERPRISE"].map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-3 py-2 text-[13px] rounded-md font-medium text-white bg-primary hover:bg-[#001e6e] transition-colors"
+            >
+              Save changes
+            </button>
           </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setShowEdit(false)}
-            className="px-3 py-2 text-[13px] rounded-md border border-border bg-surface text-foreground hover:bg-[#EDEEF5] transition-colors font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              setTenant((t) => ({ ...t, name: editForm.name, plan: editForm.plan }));
-              setShowEdit(false);
-            }}
-            className="px-3 py-2 text-[13px] rounded-md font-medium text-white bg-primary hover:bg-[#001e6e] transition-colors"
-          >
-            Save changes
-          </button>
-        </div>
+        </form>
       </Dialog>
     </>
   );

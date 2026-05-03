@@ -6,7 +6,11 @@ import { notFound } from "next/navigation";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return { title: `Tenant ${id} — PeopleCore Admin` };
+  const tenant = await prisma.tenant.findUnique({
+    where: { id, deletedAt: null },
+    select: { name: true },
+  });
+  return { title: `${tenant?.name ?? id} — PeopleCore Admin` };
 }
 
 export default async function TenantDetailPage({
@@ -17,44 +21,40 @@ export default async function TenantDetailPage({
   await currentSuperAdmin();
   const { id } = await params;
 
-  // TODO (PC-77): real query after PC-68 migration
-  let tenant: {
-    id: string;
-    name: string;
-    slug: string;
-    plan: string;
-    status: string;
-    employeeCount: number;
-    hrAdmins: number;
-    createdAt: string;
-    adminEmail: string;
-  } | null = null;
+  const row = await prisma.tenant.findUnique({
+    where: { id, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      plan: true,
+      status: true,
+      createdAt: true,
+      memberships: {
+        select: {
+          role: true,
+          user: { select: { email: true } },
+        },
+      },
+    },
+  });
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row = await (prisma as any).tenant.findUnique({
-      where: { id },
-      select: { id: true, name: true, slug: true, plan: true, status: true, createdAt: true },
-    });
-    if (row) {
-      tenant = {
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        plan: row.plan ?? "FREE",
-        status: row.status ?? "ACTIVE",
-        employeeCount: 0,
-        hrAdmins: 0,
-        createdAt: row.createdAt?.toISOString?.() ?? "",
-        adminEmail: "",
-      };
-    }
-  } catch {
-    // Tenant model not yet migrated
-    notFound();
-  }
+  if (!row) notFound();
 
-  if (!tenant) notFound();
+  const adminMembership = row.memberships.find((m) => m.role === "ADMIN");
+  const hrAdmins = row.memberships.filter((m) => m.role === "ADMIN").length;
+
+  const tenant = {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    plan: row.plan as string,
+    status: row.status as string,
+    employeeCount: row.memberships.length,
+    hrAdmins,
+    createdAt: row.createdAt.toISOString(),
+    adminEmail: adminMembership?.user.email ?? "",
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
