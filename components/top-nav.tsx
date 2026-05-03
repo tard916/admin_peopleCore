@@ -17,13 +17,8 @@ export async function TopNav({ crumbs = [], actions }: TopNavProps) {
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
 
   return (
-    <nav
-      className="h-12 bg-surface border-b border-border flex items-center px-5 gap-1.5 sticky top-0 z-20 shrink-0"
-    >
-      <Link
-        href="/tenants"
-        className="flex items-center gap-[7px] no-underline"
-      >
+    <nav className="h-12 bg-surface border-b border-border flex items-center px-5 gap-1.5 sticky top-0 z-20 shrink-0">
+      <Link href="/tenants" className="flex items-center gap-2 no-underline">
         <div className="w-[22px] h-[22px] rounded-[5px] bg-primary flex items-center justify-center shrink-0">
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
             <circle cx="7" cy="4.5" r="2.5" fill="white" />
@@ -35,9 +30,7 @@ export async function TopNav({ crumbs = [], actions }: TopNavProps) {
             />
           </svg>
         </div>
-        <span className="text-[13px] font-semibold text-foreground tracking-[-0.02em]">
-          PeopleCore Admin
-        </span>
+        <span className="t-subheading">PeopleCore Admin</span>
       </Link>
 
       {crumbs.map((c, i) => (
@@ -46,24 +39,21 @@ export async function TopNav({ crumbs = [], actions }: TopNavProps) {
           {c.href ? (
             <Link
               href={c.href}
-              className="text-[13px] text-muted-foreground no-underline hover:text-foreground transition-colors"
+              className="t-ui-muted no-underline hover:text-foreground transition-colors"
             >
               {c.label}
             </Link>
           ) : (
-            <span className="text-[13px] text-foreground font-medium">
-              {c.label}
-            </span>
+            <span className="t-ui font-medium">{c.label}</span>
           )}
         </span>
       ))}
 
       <div className="flex-1" />
-
       {actions}
 
       <div className="flex items-center gap-2 ml-3">
-        <span className="text-[12px] text-muted-foreground hidden sm:block">{email}</span>
+        <span className="t-small hidden sm:block">{email}</span>
         <UserButton appearance={{ elements: { avatarBox: "w-[26px] h-[26px]" } }} />
       </div>
     </nav>

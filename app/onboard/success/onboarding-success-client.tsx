@@ -19,9 +19,9 @@ export function OnboardingSuccessClient({ tenantSlug, adminEmail, tempPassword }
   };
 
   const rows = [
-    { key: "slug",  label: "Tenant slug",       value: tenantSlug,    mono: true  },
-    { key: "email", label: "Admin email",         value: adminEmail,    mono: false },
-    { key: "pass",  label: "Temporary password", value: tempPassword,  mono: true  },
+    { key: "slug",  label: "Tenant slug",       value: tenantSlug,   mono: true  },
+    { key: "email", label: "Admin email",        value: adminEmail,   mono: false },
+    { key: "pass",  label: "Temporary password", value: tempPassword, mono: true  },
   ];
 
   return (
@@ -37,15 +37,8 @@ export function OnboardingSuccessClient({ tenantSlug, adminEmail, tempPassword }
               <path d="M4 10L8.5 14.5L16 6" stroke="#006A61" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <div
-            className="text-[10.5px] font-semibold tracking-[0.07em] uppercase mb-1.5"
-            style={{ color: "#006A61" }}
-          >
-            Tenant created
-          </div>
-          <h1 className="text-[22px] font-bold text-foreground tracking-[-0.03em]">
-            {tenantSlug}
-          </h1>
+          <div className="eyebrow mb-1.5" style={{ color: "#006A61" }}>Tenant created</div>
+          <h1 className="t-page-title">{tenantSlug}</h1>
         </div>
 
         {/* Credentials card */}
@@ -56,15 +49,10 @@ export function OnboardingSuccessClient({ tenantSlug, adminEmail, tempPassword }
               className="flex items-center justify-between py-3.5"
               style={{ borderBottom: i < rows.length - 1 ? "1px solid rgba(19,27,46,0.08)" : "none" }}
             >
-              <span
-                className="text-[11.5px] text-muted-foreground font-medium uppercase tracking-[0.05em]"
-              >
-                {row.label}
-              </span>
+              <span className="eyebrow">{row.label}</span>
               <div className="flex items-center gap-2">
                 <span
-                  className="text-[13px] text-foreground cursor-pointer select-all"
-                  style={{ fontFamily: row.mono ? '"JetBrains Mono", ui-monospace, monospace' : "inherit", fontWeight: row.mono ? 500 : 400 }}
+                  className={row.mono ? "t-mono cursor-pointer select-all" : "t-ui cursor-pointer select-all"}
                   onClick={() => copy(row.value, row.key)}
                 >
                   {row.value}
@@ -92,28 +80,23 @@ export function OnboardingSuccessClient({ tenantSlug, adminEmail, tempPassword }
         {/* Warning */}
         <div
           className="rounded-md px-4 py-3 flex gap-2.5 mb-2.5"
-          style={{
-            background: "rgba(180,120,0,0.07)",
-            border: "1px solid rgba(180,120,0,0.22)",
-          }}
+          style={{ background: "rgba(180,120,0,0.07)", border: "1px solid rgba(180,120,0,0.22)" }}
         >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0 mt-[1px]">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="shrink-0 mt-px">
             <path d="M7.5 1.5L13.5 12.5H1.5L7.5 1.5z" stroke="#9A6600" strokeWidth="1.4" strokeLinejoin="round" />
             <path d="M7.5 6V9" stroke="#9A6600" strokeWidth="1.4" strokeLinecap="round" />
             <circle cx="7.5" cy="11" r="0.7" fill="#9A6600" />
           </svg>
-          <p className="text-[12.5px] leading-[1.55]" style={{ color: "#7A5000" }}>
+          <p className="t-small leading-relaxed" style={{ color: "#7A5000" }}>
             Share via <strong>1Password Send</strong> — not email. The HR admin must change this password on first login.
           </p>
         </div>
 
-        <p className="text-center text-[11.5px] text-muted-foreground mb-4">
-          This page cannot be shown again.
-        </p>
+        <p className="t-small text-center mb-4">This page cannot be shown again.</p>
 
         <Link
           href="/tenants"
-          className="block w-full py-2.5 px-5 rounded-md text-center text-[13px] font-medium text-foreground border border-border bg-surface hover:bg-[#EDEEF5] transition-colors"
+          className="block w-full py-2.5 px-5 rounded-md text-center text-sm font-medium text-foreground border border-border bg-surface hover:bg-muted transition-colors"
         >
           Back to tenants
         </Link>
