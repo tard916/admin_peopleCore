@@ -35,7 +35,7 @@ export async function TopNav({ crumbs = [], actions }: TopNavProps) {
 
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          <span className="text-border text-sm select-none">/</span>
+          <span className="text-border t-ui select-none">/</span>
           {c.href ? (
             <Link
               href={c.href}
