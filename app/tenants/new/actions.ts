@@ -55,42 +55,47 @@ export async function createTenantAction(
   const tempPassword = `Tmp-${rand}!`;
   const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
+  // --- DB work inside try so unique-constraint errors are caught cleanly.
+  // redirect() is intentionally OUTSIDE this block: in Next.js App Router,
+  // redirect() throws a special NEXT_REDIRECT error internally. If it were
+  // inside the catch, that error would be swallowed and the tenant would be
+  // silently created without the user ever reaching /onboard/success.
+  let tenantSlug: string;
   try {
-    // TODO (PC-76): Requires PC-68 migration to add Tenant model + User.isSuperAdmin/tenantId fields
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tenant = await prisma.tenant.create({
-  data: {
-    id: `ten_${nanoid(8)}`,
-    name,
-    slug,
-    plan,
-    status: "ACTIVE",
-    memberships: {
-      create: [
-        {
-          role: "ADMIN", // or "EMPLOYEE" or introduce OWNER later
-          user: {
-            create: {
-              id: `usr_${nanoid(8)}`,
-              email,
-              name: `${firstName} ${lastName}`, // 👈 your schema uses `name`, not first/last
-              hashedPassword,
-              mustChangePassword: true,
+      data: {
+        id: `ten_${nanoid(8)}`,
+        name,
+        slug,
+        plan,
+        status: "ACTIVE",
+        memberships: {
+          create: [
+            {
+              role: "ADMIN",
+              user: {
+                create: {
+                  id: `usr_${nanoid(8)}`,
+                  email,
+                  name: `${firstName} ${lastName}`,
+                  hashedPassword,
+                  mustChangePassword: true,
+                },
+              },
             },
-          },
+          ],
         },
-      ],
-    },
-  },
-});
+      },
+    });
 
+    // Store credentials in a short-lived (60s) iron-session flash cookie.
     const session = await getFlashSession();
     session.tempPassword = tempPassword;
     session.tenantSlug = tenant.slug;
     session.adminEmail = email;
     await session.save();
 
-    redirect(`/onboard/success`);
+    tenantSlug = tenant.slug;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     if (msg.includes("Unique constraint") && msg.includes("slug")) {
@@ -101,4 +106,9 @@ export async function createTenantAction(
     }
     return { error: "Failed to create tenant. Please try again." };
   }
+
+  // redirect() must be called outside try/catch — it throws NEXT_REDIRECT
+  // which must propagate uncaught for the App Router to handle it correctly.
+  void tenantSlug; // used above; redirect is unconditional
+  redirect("/onboard/success");
 }
