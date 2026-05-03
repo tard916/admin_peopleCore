@@ -5,9 +5,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-heading: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -33,7 +33,6 @@
 }
 
 :root {
-  /* Admin — same palette as PeopleCore for visual consistency */
   --background: #F4F5FB;
   --foreground: #131B2E;
   --surface: #FFFFFF;
@@ -85,7 +84,7 @@
     @apply border-border outline-ring/40;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-sm leading-relaxed;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   html {
@@ -93,12 +92,69 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
   }
 }
 
 @layer components {
+  /* ── Type scale ─────────────────────────────────────────��──────
+     Use these semantic classes throughout the admin app instead of
+     arbitrary text-[Npx] values.
+  ─────────────────────────────────────────────────────────────── */
+
+  /** Page / section title — e.g. "Tenants" h1, tenant name */
+  .t-page-title {
+    @apply font-heading text-xl font-bold tracking-tight text-foreground;
+  }
+
+  /** Card / dialog heading — e.g. "Edit tenant", "Account not provisioned" */
+  .t-heading {
+    @apply font-heading text-base font-semibold tracking-tight text-foreground;
+  }
+
+  /** Sub-heading / label group heading */
+  .t-subheading {
+    @apply font-heading text-sm font-semibold tracking-tight text-foreground;
+  }
+
+  /** Default body copy */
+  .t-body {
+    @apply text-sm text-foreground leading-relaxed;
+  }
+
+  /** Secondary / descriptive body copy */
+  .t-body-muted {
+    @apply text-sm text-muted-foreground leading-relaxed;
+  }
+
+  /** Table cells, form values, dense UI text */
+  .t-ui {
+    @apply text-[0.8125rem] text-foreground;
+  }
+
+  /** Secondary UI text — badges, meta, secondary labels */
+  .t-ui-muted {
+    @apply text-[0.8125rem] text-muted-foreground;
+  }
+
+  /** Small / helper text — hints, timestamps, footnotes */
+  .t-small {
+    @apply text-xs text-muted-foreground;
+  }
+
+  /** Eyebrow label — section headers, table column headers */
   .eyebrow {
     @apply text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  /** Monospace values — slugs, passwords, codes */
+  .t-mono {
+    @apply font-mono text-[0.8125rem] text-foreground;
+  }
+
+  /** Stat number — large data point in stat cards */
+  .t-stat {
+    @apply font-heading text-[1.375rem] font-bold tracking-tight text-foreground tabular-nums;
   }
 }

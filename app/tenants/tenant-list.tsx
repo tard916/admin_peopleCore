@@ -21,6 +21,12 @@ function fmtDate(s: string) {
 
 const PER = 20;
 
+const selectCls =
+  "px-3 py-2 bg-muted border border-transparent rounded-md t-ui outline-none focus:bg-white focus:border-primary appearance-none transition-all cursor-pointer";
+const chevron = `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
+const paginationBtn =
+  "px-3 py-1 text-xs rounded-md border border-border bg-surface text-foreground disabled:opacity-40 hover:bg-muted transition-colors";
+
 export function TenantList({ tenants }: { tenants: Tenant[] }) {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("");
@@ -30,9 +36,9 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
   const filtered = tenants.filter((t) => {
     const q = search.toLowerCase();
     return (
-      (!q || t.name.toLowerCase().includes(q) || t.slug.includes(q))
-      && (!planFilter || t.plan === planFilter)
-      && (!statusFilter || t.status === statusFilter)
+      (!q || t.name.toLowerCase().includes(q) || t.slug.includes(q)) &&
+      (!planFilter || t.plan === planFilter) &&
+      (!statusFilter || t.status === statusFilter)
     );
   });
 
@@ -40,34 +46,38 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
   const pageData = filtered.slice((page - 1) * PER, page * PER);
 
   const handleSearchChange = (v: string) => { setSearch(v); setPage(1); };
-  const handlePlanChange = (v: string) => { setPlanFilter(v); setPage(1); };
+  const handlePlanChange   = (v: string) => { setPlanFilter(v); setPage(1); };
   const handleStatusChange = (v: string) => { setStatusFilter(v); setPage(1); };
 
   return (
     <div>
-      {/* Filters */}
+      {/* Header + filters */}
       <div className="flex items-baseline gap-2.5 mb-4">
-        <h1 className="text-[18px] font-bold text-foreground tracking-[-0.03em]">Tenants</h1>
-        <span className="text-[12px] text-muted-foreground">{filtered.length} results</span>
+        <h1 className="t-page-title">Tenants</h1>
+        <span className="t-small">{filtered.length} results</span>
       </div>
+
       <div className="flex gap-2 mb-4 flex-wrap">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <svg
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="13" height="13" viewBox="0 0 13 13" fill="none"
+          >
             <circle cx="5.5" cy="5.5" r="4" stroke="#6B7190" strokeWidth="1.4" />
             <path d="M9 9L11.5 11.5" stroke="#6B7190" strokeWidth="1.4" strokeLinecap="round" />
           </svg>
           <input
-            className="w-full pl-8 pr-3 py-2 bg-[#EDEEF5] border border-transparent rounded-md text-[13px] text-foreground outline-none focus:bg-white focus:border-primary transition-all"
+            className="w-full pl-8 pr-3 py-2 bg-muted border border-transparent rounded-md t-ui outline-none focus:bg-white focus:border-primary transition-all"
             placeholder="Search by name or slug…"
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
         <select
-          className="w-[148px] px-3 py-2 bg-[#EDEEF5] border border-transparent rounded-md text-[13px] text-foreground outline-none focus:bg-white focus:border-primary appearance-none transition-all cursor-pointer"
+          className={`w-[148px] ${selectCls}`}
           value={planFilter}
           onChange={(e) => handlePlanChange(e.target.value)}
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
+          style={{ backgroundImage: chevron, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: "2rem" }}
         >
           <option value="">All plans</option>
           {["FREE", "STARTER", "GROWTH", "ENTERPRISE"].map((p) => (
@@ -75,36 +85,43 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
           ))}
         </select>
         <select
-          className="w-[148px] px-3 py-2 bg-[#EDEEF5] border border-transparent rounded-md text-[13px] text-foreground outline-none focus:bg-white focus:border-primary appearance-none transition-all cursor-pointer"
+          className={`w-[148px] ${selectCls}`}
           value={statusFilter}
           onChange={(e) => handleStatusChange(e.target.value)}
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
+          style={{ backgroundImage: chevron, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: "2rem" }}
         >
           <option value="">All statuses</option>
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="SUSPENDED">SUSPENDED</option>
+          <option value="ACTIVE">Active</option>
+          <option value="SUSPENDED">Suspended</option>
         </select>
       </div>
 
       {/* Table */}
       <div className="bg-surface rounded-xl border border-border overflow-hidden">
         {pageData.length === 0 ? (
-          <div className="py-[72px] px-6 text-center">
-            <div className="text-[28px] text-border mb-3 font-light">—</div>
-            <div className="text-[14px] font-medium text-foreground mb-1">No tenants found</div>
-            <div className="text-[13px] text-muted-foreground">Try adjusting your search or filters</div>
+          <div className="py-16 px-6 text-center">
+            <div className="text-3xl text-border mb-3 font-light">—</div>
+            <p className="t-subheading mb-1">No tenants found</p>
+            <p className="t-body-muted">Try adjusting your search or filters</p>
           </div>
         ) : (
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                {["Name", "Slug", "Plan", "Status", "Employees", "Created"].map((h, i) => (
+                {[
+                  { label: "Name",      align: "left"  },
+                  { label: "Slug",      align: "left"  },
+                  { label: "Plan",      align: "left"  },
+                  { label: "Status",    align: "left"  },
+                  { label: "Employees", align: "right" },
+                  { label: "Created",   align: "left"  },
+                ].map(({ label, align }) => (
                   <th
-                    key={h}
-                    className="px-3.5 py-2 text-[10.5px] font-semibold text-muted-foreground tracking-[0.05em] uppercase border-b border-border whitespace-nowrap"
-                    style={{ textAlign: h === "Employees" ? "right" : "left" }}
+                    key={label}
+                    className="px-3.5 py-2 eyebrow border-b border-border whitespace-nowrap"
+                    style={{ textAlign: align as "left" | "right" }}
                   >
-                    {h}
+                    {label}
                   </th>
                 ))}
               </tr>
@@ -112,9 +129,9 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
             <tbody>
               {pageData.map((t) => (
                 <Link key={t.id} href={`/tenants/${t.id}`} legacyBehavior>
-                  <tr className="cursor-pointer hover:bg-[rgba(237,238,245,0.6)] transition-colors">
-                    <td className="px-3.5 py-2.5 text-[13px] border-b border-border">
-                      <span className="font-medium text-foreground">{t.name}</span>
+                  <tr className="cursor-pointer hover:bg-muted/40 transition-colors">
+                    <td className="px-3.5 py-2.5 border-b border-border">
+                      <span className="t-ui font-medium">{t.name}</span>
                     </td>
                     <td className="px-3.5 py-2.5 border-b border-border">
                       <SlugChip value={t.slug} />
@@ -125,10 +142,10 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
                     <td className="px-3.5 py-2.5 border-b border-border">
                       <StatusBadge value={t.status} />
                     </td>
-                    <td className="px-3.5 py-2.5 border-b border-border text-right text-[13px] text-muted-foreground tabular-nums">
+                    <td className="px-3.5 py-2.5 border-b border-border text-right t-ui-muted tabular-nums">
                       {t.employeeCount.toLocaleString()}
                     </td>
-                    <td className="px-3.5 py-2.5 border-b border-border text-[13px] text-muted-foreground">
+                    <td className="px-3.5 py-2.5 border-b border-border t-ui-muted">
                       {fmtDate(t.createdAt)}
                     </td>
                   </tr>
@@ -141,35 +158,27 @@ export function TenantList({ tenants }: { tenants: Tenant[] }) {
         {/* Pagination */}
         {pages > 1 && (
           <div className="px-4 py-2.5 border-t border-border flex items-center justify-between">
-            <span className="text-[11.5px] text-muted-foreground">
+            <span className="t-small">
               {(page - 1) * PER + 1}–{Math.min(page * PER, filtered.length)} of {filtered.length}
             </span>
             <div className="flex gap-1">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-                className="px-3 py-1 text-[12px] rounded-md border border-border bg-surface text-foreground disabled:opacity-40 hover:bg-[#EDEEF5] transition-colors"
-              >
+              <button disabled={page === 1} onClick={() => setPage((p) => p - 1)} className={paginationBtn}>
                 ← Prev
               </button>
               {Array.from({ length: Math.min(pages, 5) }, (_, i) => i + 1).map((n) => (
                 <button
                   key={n}
                   onClick={() => setPage(n)}
-                  className={`px-3 py-1 text-[12px] rounded-md transition-colors ${
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${
                     n === page
                       ? "bg-primary text-white border border-primary"
-                      : "border border-border bg-surface text-foreground hover:bg-[#EDEEF5]"
+                      : "border border-border bg-surface text-foreground hover:bg-muted"
                   }`}
                 >
                   {n}
                 </button>
               ))}
-              <button
-                disabled={page === pages}
-                onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1 text-[12px] rounded-md border border-border bg-surface text-foreground disabled:opacity-40 hover:bg-[#EDEEF5] transition-colors"
-              >
+              <button disabled={page === pages} onClick={() => setPage((p) => p + 1)} className={paginationBtn}>
                 Next →
               </button>
             </div>

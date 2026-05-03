@@ -41,17 +41,13 @@ export default async function AccessDeniedPage({
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
       <div className="w-full max-w-[420px]">
         <div className="bg-surface rounded-xl border border-border p-7">
-          <h1 className="text-[17px] font-semibold text-foreground tracking-[-0.025em] mb-3">
-            {variant.title}
-          </h1>
-          <p className="text-[13px] text-muted-foreground mb-2">
-            Signed in as <span className="font-mono">{email}</span>
+          <h1 className="t-heading mb-2">{variant.title}</h1>
+          <p className="t-small mb-1.5">
+            Signed in as <span className="t-mono">{email}</span>
           </p>
-          <p className="text-[13px] text-muted-foreground mb-5 leading-relaxed">
-            {variant.body(email)}
-          </p>
+          <p className="t-body-muted mb-5">{variant.body(email)}</p>
           <SignOutButton redirectUrl="/login">
-            <button className="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-primary text-primary-foreground text-[13px] font-semibold hover:bg-primary/90 transition-colors">
+            <button className="inline-flex items-center justify-center h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
               Sign out
             </button>
           </SignOutButton>

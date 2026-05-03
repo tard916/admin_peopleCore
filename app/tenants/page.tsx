@@ -48,11 +48,15 @@ export default async function TenantsPage() {
         {tenants.length === 0 ? (
           <div>
             <div className="flex items-baseline gap-2.5 mb-4">
-              <h1 className="text-[18px] font-bold text-foreground tracking-[-0.03em]">Tenants</h1>
-              <span className="text-[12px] text-muted-foreground">0 results</span>
+              <h1 className="t-page-title">Tenants</h1>
+              <span className="t-small">0 results</span>
             </div>
-            <div className="bg-surface rounded-xl border border-border py-16 text-center text-[13px] text-muted-foreground">
-              No tenants yet — <Link href="/tenants/new" className="text-primary underline">create your first tenant</Link>.
+            <div className="bg-surface rounded-xl border border-border py-16 text-center t-body-muted">
+              No tenants yet —{" "}
+              <Link href="/tenants/new" className="text-primary underline">
+                create your first tenant
+              </Link>
+              .
             </div>
           </div>
         ) : (
