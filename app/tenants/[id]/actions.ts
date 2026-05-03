@@ -1,7 +1,25 @@
 "use server";
 
+/**
+ * RULE: never call redirect() in server actions invoked from client components.
+ *
+ * redirect() throws NEXT_REDIRECT internally. When a client component calls a
+ * server action inside try/catch (e.g. startTransition → try { await action() }),
+ * the NEXT_REDIRECT is caught and the catch block runs instead of navigating.
+ * The DB write succeeds but the UI shows an error — a silent data/UI split.
+ *
+ * Pattern for client-initiated mutations that need navigation:
+ *   Server action  → does DB work, revalidatePath(), returns void
+ *   Client handler → calls router.push() / router.replace() after await
+ *
+ * redirect() is safe when called from:
+ *   - Server Component renders (pages, layouts)
+ *   - Route Handlers
+ *   - Server actions bound to <form action={...}> via useActionState
+ *     (Next.js handles NEXT_REDIRECT before React's error boundary)
+ */
+
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { currentSuperAdmin } from "@/lib/super-admin";
 import { prisma } from "@/lib/db";
@@ -143,7 +161,12 @@ export async function reactivateTenantAction(tenantId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Soft-delete
 // ---------------------------------------------------------------------------
-export async function deleteTenantAction(tenantId: string): Promise<never> {
+// Returns void (not never) — redirect() is NOT called here.
+// Calling redirect() from a server action that's invoked via startTransition
+// in a client component causes NEXT_REDIRECT to be caught by the client's
+// try/catch, showing a spurious error even though the DB write succeeded.
+// The client calls router.push("/tenants") after this action resolves instead.
+export async function deleteTenantAction(tenantId: string): Promise<void> {
   const admin = await currentSuperAdmin();
 
   await prisma.$transaction(async (tx) => {
@@ -165,5 +188,5 @@ export async function deleteTenantAction(tenantId: string): Promise<never> {
   });
 
   revalidatePath("/tenants");
-  redirect("/tenants");
+  // Navigation back to /tenants is handled by the client after this resolves
 }

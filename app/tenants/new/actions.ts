@@ -1,5 +1,15 @@
 "use server";
 
+/**
+ * redirect() is safe here because createTenantAction is bound to a
+ * <form action={...}> via useActionState. Next.js intercepts NEXT_REDIRECT
+ * before React's error boundary, so it navigates correctly.
+ *
+ * Do NOT call redirect() in actions invoked from client-side try/catch
+ * (e.g. startTransition → try { await action() }) — NEXT_REDIRECT will be
+ * caught and swallowed. Use router.push() on the client after await instead.
+ */
+
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { currentSuperAdmin } from "@/lib/super-admin";
@@ -109,6 +119,11 @@ export async function createTenantAction(
 
   // redirect() must be called outside try/catch — it throws NEXT_REDIRECT
   // which must propagate uncaught for the App Router to handle it correctly.
-  void tenantSlug; // used above; redirect is unconditional
-  redirect("/onboard/success");
+  //
+  // We redirect to /api/flash (a Route Handler) which reads + clears the
+  // iron-session cookie and redirects on to /onboard/success with data as
+  // search params. This avoids the Next.js restriction that cookie writes
+  // are only allowed in Server Actions / Route Handlers — not page renders.
+  void tenantSlug;
+  redirect("/api/flash");
 }
