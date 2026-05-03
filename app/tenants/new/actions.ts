@@ -1,5 +1,15 @@
 "use server";
 
+/**
+ * redirect() is safe here because createTenantAction is bound to a
+ * <form action={...}> via useActionState. Next.js intercepts NEXT_REDIRECT
+ * before React's error boundary, so it navigates correctly.
+ *
+ * Do NOT call redirect() in actions invoked from client-side try/catch
+ * (e.g. startTransition → try { await action() }) — NEXT_REDIRECT will be
+ * caught and swallowed. Use router.push() on the client after await instead.
+ */
+
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { currentSuperAdmin } from "@/lib/super-admin";

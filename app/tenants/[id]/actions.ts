@@ -1,7 +1,25 @@
 "use server";
 
+/**
+ * RULE: never call redirect() in server actions invoked from client components.
+ *
+ * redirect() throws NEXT_REDIRECT internally. When a client component calls a
+ * server action inside try/catch (e.g. startTransition → try { await action() }),
+ * the NEXT_REDIRECT is caught and the catch block runs instead of navigating.
+ * The DB write succeeds but the UI shows an error — a silent data/UI split.
+ *
+ * Pattern for client-initiated mutations that need navigation:
+ *   Server action  → does DB work, revalidatePath(), returns void
+ *   Client handler → calls router.push() / router.replace() after await
+ *
+ * redirect() is safe when called from:
+ *   - Server Component renders (pages, layouts)
+ *   - Route Handlers
+ *   - Server actions bound to <form action={...}> via useActionState
+ *     (Next.js handles NEXT_REDIRECT before React's error boundary)
+ */
+
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { currentSuperAdmin } from "@/lib/super-admin";
 import { prisma } from "@/lib/db";
