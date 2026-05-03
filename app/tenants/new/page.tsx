@@ -1,6 +1,6 @@
 import { currentSuperAdmin } from "@/lib/super-admin";
 import { TopNav } from "@/components/top-nav";
-import { CreateTenantForm } from "./create-tenant-form";
+import { CreateTenantWizard } from "./wizard/create-tenant-wizard";
 
 export const metadata = { title: "New tenant — PeopleCore Admin" };
 
@@ -20,7 +20,7 @@ export default async function NewTenantPage() {
           ← Tenants
         </a>
         <h1 className="t-page-title mb-6">New tenant</h1>
-        <CreateTenantForm />
+        <CreateTenantWizard />
       </main>
     </div>
   );
