@@ -1,16 +1,15 @@
 "use server";
 
 /**
- * redirect() is safe here because createTenantAction is bound to a
- * <form action={...}> via useActionState. Next.js intercepts NEXT_REDIRECT
- * before React's error boundary, so it navigates correctly.
+ * No redirect() here — the wizard client calls router.push('/api/flash')
+ * after receiving { ok: true }. redirect() must never be called from a server
+ * action that is invoked via `await action(...)` in client event handlers —
+ * NEXT_REDIRECT would be caught by the surrounding try/catch and swallowed.
  *
- * Do NOT call redirect() in actions invoked from client-side try/catch
- * (e.g. startTransition → try { await action() }) — NEXT_REDIRECT will be
- * caught and swallowed. Use router.push() on the client after await instead.
+ * The action retains "use server" — the restriction is only on calling
+ * redirect() inside it; client navigation is the caller's responsibility.
  */
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { currentSuperAdmin } from "@/lib/super-admin";
 import { getFlashSession } from "@/lib/session";
@@ -31,24 +30,21 @@ const schema = z.object({
 });
 
 export type CreateTenantInput = z.infer<typeof schema>;
+
+// Kept for backward compatibility with create-tenant-form.tsx (deleted in Unit 5)
 export type CreateTenantState = { errors?: Record<string, string>; error?: string } | undefined;
 
+export type CreateTenantResult =
+  | { ok: true }
+  | { errors: Record<string, string> }
+  | { error: string };
+
 export async function createTenantAction(
-  _prev: CreateTenantState,
-  formData: FormData,
-): Promise<CreateTenantState> {
+  input: CreateTenantInput,
+): Promise<CreateTenantResult> {
   await currentSuperAdmin();
 
-  const raw = {
-    name: formData.get("name"),
-    slug: formData.get("slug"),
-    plan: formData.get("plan"),
-    firstName: formData.get("firstName"),
-    lastName: formData.get("lastName"),
-    email: formData.get("email"),
-  };
-
-  const parsed = schema.safeParse(raw);
+  const parsed = schema.safeParse(input);
   if (!parsed.success) {
     return {
       errors: Object.fromEntries(
@@ -65,12 +61,8 @@ export async function createTenantAction(
   const tempPassword = `Tmp-${rand}!`;
   const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
-  // --- DB work inside try so unique-constraint errors are caught cleanly.
-  // redirect() is intentionally OUTSIDE this block: in Next.js App Router,
-  // redirect() throws a special NEXT_REDIRECT error internally. If it were
-  // inside the catch, that error would be swallowed and the tenant would be
-  // silently created without the user ever reaching /onboard/success.
-  let tenantSlug: string;
+  // DB work inside try so unique-constraint errors are caught cleanly.
+  // On success, return { ok: true } — the client calls router.push('/api/flash').
   try {
     const tenant = await prisma.tenant.create({
       data: {
@@ -99,13 +91,15 @@ export async function createTenantAction(
     });
 
     // Store credentials in a short-lived (60s) iron-session flash cookie.
+    // The /api/flash Route Handler reads + clears this and redirects to
+    // /onboard/success — cookie writes are forbidden in Server Component renders.
     const session = await getFlashSession();
     session.tempPassword = tempPassword;
     session.tenantSlug = tenant.slug;
     session.adminEmail = email;
     await session.save();
 
-    tenantSlug = tenant.slug;
+    return { ok: true };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     if (msg.includes("Unique constraint") && msg.includes("slug")) {
@@ -116,14 +110,4 @@ export async function createTenantAction(
     }
     return { error: "Failed to create tenant. Please try again." };
   }
-
-  // redirect() must be called outside try/catch — it throws NEXT_REDIRECT
-  // which must propagate uncaught for the App Router to handle it correctly.
-  //
-  // We redirect to /api/flash (a Route Handler) which reads + clears the
-  // iron-session cookie and redirects on to /onboard/success with data as
-  // search params. This avoids the Next.js restriction that cookie writes
-  // are only allowed in Server Actions / Route Handlers — not page renders.
-  void tenantSlug;
-  redirect("/api/flash");
 }

@@ -1,7 +1,18 @@
 "use client";
 
+// NOTE: This component is replaced by CreateTenantWizard (Unit 3/5) and will
+// be deleted in Unit 5 once the e2e test passes. The action signature changed
+// in Unit 2 — the wizard invokes createTenantAction directly, not via useActionState.
+
 import { useActionState, useState } from "react";
-import { createTenantAction, type CreateTenantState } from "./actions";
+import { type CreateTenantState } from "./actions";
+
+// Temporary no-op shim so this file compiles while wizard is being built.
+// Deleted with the file in Unit 5.
+async function _legacyAction(_prev: CreateTenantState, _fd: FormData): Promise<CreateTenantState> {
+  return { error: "Legacy form disabled — use the wizard." };
+}
+const createTenantAction = _legacyAction;
 
 const chevron = `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7190' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
 
