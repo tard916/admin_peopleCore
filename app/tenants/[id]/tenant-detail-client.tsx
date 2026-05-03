@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useActionState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PlanBadge, StatusBadge, SlugChip } from "@/components/pc-badge";
 import {
@@ -74,6 +75,7 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const boundEdit = editTenantAction.bind(null, tenant.id);
   const [editState, editDispatch] = useActionState(boundEdit, undefined);
@@ -101,6 +103,11 @@ export function TenantDetailClient({ tenant: initial }: { tenant: Tenant }) {
     startTransition(async () => {
       try {
         await deleteTenantAction(tenant.id);
+        // Navigate client-side after the action resolves.
+        // redirect() is NOT called inside the server action because
+        // NEXT_REDIRECT would be caught by this try/catch and show a
+        // spurious error even though the delete succeeded.
+        router.push("/tenants");
       } catch {
         toast.error("Failed to delete tenant.");
       }

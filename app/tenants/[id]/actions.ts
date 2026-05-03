@@ -143,7 +143,12 @@ export async function reactivateTenantAction(tenantId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Soft-delete
 // ---------------------------------------------------------------------------
-export async function deleteTenantAction(tenantId: string): Promise<never> {
+// Returns void (not never) — redirect() is NOT called here.
+// Calling redirect() from a server action that's invoked via startTransition
+// in a client component causes NEXT_REDIRECT to be caught by the client's
+// try/catch, showing a spurious error even though the DB write succeeded.
+// The client calls router.push("/tenants") after this action resolves instead.
+export async function deleteTenantAction(tenantId: string): Promise<void> {
   const admin = await currentSuperAdmin();
 
   await prisma.$transaction(async (tx) => {
@@ -165,5 +170,5 @@ export async function deleteTenantAction(tenantId: string): Promise<never> {
   });
 
   revalidatePath("/tenants");
-  redirect("/tenants");
+  // Navigation back to /tenants is handled by the client after this resolves
 }
