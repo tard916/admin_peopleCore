@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,12 +19,14 @@ function toSlug(s: string) {
 
 export function StepCompany({ state, onChange, onNext, editingFromReview }: Props) {
   const { name, slug, autoSlug, slugError } = state;
+  const [checkingSlug, setCheckingSlug] = useState(false);
 
   const nameError = !name.trim() ? "Required" : null;
   const slugFormatError =
     slug && !/^[a-z0-9-]+$/.test(slug) ? "Lowercase letters, numbers, and hyphens only" : null;
   const slugRequiredError = !slug.trim() ? "Required" : null;
-  const hasError = !!nameError || !!slugFormatError || !!slugRequiredError || !!slugError;
+  const hasError =
+    !!nameError || !!slugFormatError || !!slugRequiredError || !!slugError || checkingSlug;
 
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
@@ -34,6 +37,24 @@ export function StepCompany({ state, onChange, onNext, editingFromReview }: Prop
 
   function handleSlugChange(e: React.ChangeEvent<HTMLInputElement>) {
     onChange({ slug: e.target.value, autoSlug: false, slugError: null });
+  }
+
+  async function handleSlugBlur() {
+    if (!slug || slugFormatError || slugRequiredError) return;
+    setCheckingSlug(true);
+    try {
+      const res = await fetch(`/api/tenants/check-slug?slug=${encodeURIComponent(slug)}`);
+      const data = await res.json();
+      if (!data.available) {
+        onChange({ slugError: "This slug is already taken" });
+      } else {
+        onChange({ slugError: null });
+      }
+    } catch {
+      // Network error — leave slugError as-is, server will catch on submit
+    } finally {
+      setCheckingSlug(false);
+    }
   }
 
   function handleNext() {
@@ -65,14 +86,18 @@ export function StepCompany({ state, onChange, onNext, editingFromReview }: Prop
           id="company-slug"
           value={slug}
           onChange={handleSlugChange}
+          onBlur={handleSlugBlur}
           placeholder="acme-corp"
           className="font-mono"
           aria-invalid={!!displaySlugError}
         />
-        {slug && !displaySlugError && (
+        {checkingSlug && (
+          <p className="t-small text-muted-foreground">Checking availability…</p>
+        )}
+        {!checkingSlug && slug && !displaySlugError && (
           <p className="t-small text-muted-foreground">app.peoplecore.io/{slug}</p>
         )}
-        {displaySlugError && (
+        {!checkingSlug && displaySlugError && (
           <p className="t-small text-destructive">{displaySlugError}</p>
         )}
       </div>

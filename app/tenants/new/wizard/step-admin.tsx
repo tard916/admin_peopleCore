@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ interface Props {
 
 export function StepAdmin({ state, onChange, onNext, onBack, editingFromReview }: Props) {
   const { firstName, lastName, email, emailError } = state;
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   const firstNameError = !firstName.trim() ? "Required" : null;
   const lastNameError = !lastName.trim() ? "Required" : null;
@@ -27,12 +29,31 @@ export function StepAdmin({ state, onChange, onNext, onBack, editingFromReview }
     !!lastNameError ||
     !!emailFormatError ||
     !!emailRequiredError ||
-    !!emailError;
+    !!emailError ||
+    checkingEmail;
 
   const displayEmailError = emailError ?? emailRequiredError ?? emailFormatError;
 
   function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
     onChange({ email: e.target.value, emailError: null });
+  }
+
+  async function handleEmailBlur() {
+    if (!email || emailFormatError || emailRequiredError) return;
+    setCheckingEmail(true);
+    try {
+      const res = await fetch(`/api/tenants/check-email?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (!data.available) {
+        onChange({ emailError: "This email is already registered" });
+      } else {
+        onChange({ emailError: null });
+      }
+    } catch {
+      // Network error — leave emailError as-is, server will catch on submit
+    } finally {
+      setCheckingEmail(false);
+    }
   }
 
   function handleNext() {
@@ -79,10 +100,14 @@ export function StepAdmin({ state, onChange, onNext, onBack, editingFromReview }
           type="email"
           value={email}
           onChange={handleEmailChange}
+          onBlur={handleEmailBlur}
           placeholder="sarah@acme.com"
           aria-invalid={!!displayEmailError}
         />
-        {displayEmailError && (
+        {checkingEmail && (
+          <p className="t-small text-muted-foreground">Checking availability…</p>
+        )}
+        {!checkingEmail && displayEmailError && (
           <p className="t-small text-destructive">{displayEmailError}</p>
         )}
       </div>
