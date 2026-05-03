@@ -109,6 +109,11 @@ export async function createTenantAction(
 
   // redirect() must be called outside try/catch — it throws NEXT_REDIRECT
   // which must propagate uncaught for the App Router to handle it correctly.
-  void tenantSlug; // used above; redirect is unconditional
-  redirect("/onboard/success");
+  //
+  // We redirect to /api/flash (a Route Handler) which reads + clears the
+  // iron-session cookie and redirects on to /onboard/success with data as
+  // search params. This avoids the Next.js restriction that cookie writes
+  // are only allowed in Server Actions / Route Handlers — not page renders.
+  void tenantSlug;
+  redirect("/api/flash");
 }
